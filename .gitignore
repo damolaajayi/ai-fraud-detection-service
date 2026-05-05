@@ -1,0 +1,112 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+
+# Python virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Python packaging/build artifacts
+*.egg-info/ 
+.eggs/
+build/
+dist/
+wheels/
+*.whl
+*.tar.gz
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Testing
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+
+# Type checking / linting
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.ruff_cache/
+
+# Jupyter notebooks
+.ipynb_checkpoints/
+
+# Logs
+*.log
+logs/
+
+# Local database / SQLite files
+*.sqlite
+*.sqlite3
+*.db
+
+# ML model artifacts
+models/*.pkl
+models/*.joblib
+models/*.onnx
+models/*.pt
+models/*.pth
+models/*.h5
+models/*.bin
+
+# Keep model folder if empty placeholder exists
+!models/.gitkeep
+
+# Data artifacts
+data/
+datasets/
+*.csv
+*.parquet
+*.feather
+
+# Alembic generated migrations
+# Remove this ignore later if you want to commit migrations.
+alembic/versions/*.py
+!alembic/versions/.gitkeep
+
+# Docker local overrides
+docker-compose.override.yml
+
+# IDE/editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Coverage and reports
+reports/
+coverage.xml
+
+# Celery / worker artifacts
+celerybeat-schedule
+celerybeat.pid
+
+# Redis dump
+dump.rdb
+
+# Secrets / credentials
+*.pem
+*.key
+*.crt
+*.pfx
+*.json.secret
