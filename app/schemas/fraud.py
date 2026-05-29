@@ -1,5 +1,6 @@
 from datetime import datetime
 from enum import StrEnum
+from uuid import UUID
 
 from pydantic import BaseModel, Field
 
@@ -38,6 +39,7 @@ class FraudScoreRequest(BaseModel):
 
 
 class FraudScoreResponse(BaseModel):
+    score_id: UUID | None = None
     transaction_id: str
     risk_score: float = Field(..., ge=0, le=1)
     risk_level: RiskLevel
