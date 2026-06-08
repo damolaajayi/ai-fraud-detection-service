@@ -110,3 +110,8 @@ dump.rdb
 *.crt
 *.pfx
 *.json.secret
+
+# ML model artifacts
+models/*.pkl
+models/*.joblib
+models/*.json
