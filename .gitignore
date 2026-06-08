@@ -1,23 +1,19 @@
-# Python bytecode
+# Environment
+.env
+.env.*
+!.env.example
+
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
-*.pyo
-*.pyd
-
-# Python virtual environments
 .venv/
 venv/
 env/
 ENV/
 
-# Environment files
-.env
-.env.*
-!.env.example
-
-# Python packaging/build artifacts
-*.egg-info/ 
+# Build and packaging
+*.egg-info/
 .eggs/
 build/
 dist/
@@ -25,47 +21,33 @@ wheels/
 *.whl
 *.tar.gz
 
-# Installer logs
-pip-log.txt
-pip-delete-this-directory.txt
-
-# Testing
+# Tests, coverage, and linting
 .pytest_cache/
 .coverage
 .coverage.*
 htmlcov/
 .tox/
 .nox/
-
-# Type checking / linting
 .mypy_cache/
-.dmypy.json
-dmypy.json
-.pyre/
 .ruff_cache/
-
-# Jupyter notebooks
-.ipynb_checkpoints/
+.pyre/
 
 # Logs
 *.log
 logs/
 
-# Local database / SQLite files
+# Local databases and runtime files
+*.db
 *.sqlite
 *.sqlite3
-*.db
+dump.rdb
+celerybeat.pid
+celerybeat-schedule
 
-# ML model artifacts
+# Model artifacts
 models/*.pkl
 models/*.joblib
-models/*.onnx
-models/*.pt
-models/*.pth
-models/*.h5
-models/*.bin
-
-# Keep model folder if empty placeholder exists
+models/*.json
 !models/.gitkeep
 
 # Data artifacts
@@ -75,43 +57,20 @@ datasets/
 *.parquet
 *.feather
 
-# Alembic generated migrations
-# Remove this ignore later if you want to commit migrations.
-alembic/versions/*.py
-!alembic/versions/.gitkeep
-
-# Docker local overrides
+# Local Docker overrides
 docker-compose.override.yml
 
-# IDE/editor files
+# IDE/editor and OS files
 .vscode/
 .idea/
 *.swp
 *.swo
-
-# OS files
 .DS_Store
 Thumbs.db
 
-# Coverage and reports
-reports/
-coverage.xml
-
-# Celery / worker artifacts
-celerybeat-schedule
-celerybeat.pid
-
-# Redis dump
-dump.rdb
-
-# Secrets / credentials
+# Secrets and credentials
 *.pem
 *.key
 *.crt
 *.pfx
 *.json.secret
-
-# ML model artifacts
-models/*.pkl
-models/*.joblib
-models/*.json

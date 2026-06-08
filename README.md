@@ -1,637 +1,269 @@
 # ai-fraud-detection-service
 
-AI-powered fraud detection service built with FastAPI, machine learning, feature engineering, async processing, and production-ready backend architecture.
+Production-minded fraud detection backend built with FastAPI, PostgreSQL, async SQLAlchemy, Alembic, rule-based scoring, feature engineering, and a simple baseline ML pipeline.
 
-## Overview
+## Why This Project Exists
 
-`ai-fraud-detection-service` is a backend system that detects potentially fraudulent transactions using rule-based checks, machine learning models, and real-time risk scoring.
+This project shows how a fraud scoring service can be structured beyond a notebook demo. It receives transaction data, extracts reusable fraud features, applies explainable rules, optionally blends in a trained ML model score, stores the score and feature snapshot, and exposes retrieval endpoints for auditability.
 
-The service is designed to complement payment platforms such as `payment-routing-engine` by acting as an intelligent risk engine that can evaluate transactions before or after payment processing.
-
-This project demonstrates how to build an AI-native backend service that combines:
-
-- FastAPI
-- machine learning inference
-- feature engineering
-- async background processing
-- PostgreSQL persistence
-- Redis caching
-- model versioning
-- monitoring and observability
-- production-grade API design
-
-This is not just a simple ML notebook project. It is designed as a real backend service that exposes fraud intelligence through APIs.
-
----
-
-## Goals
-
-The goal of this project is to model the core concerns of a real fraud detection platform:
-
-- real-time fraud scoring
-- transaction feature extraction
-- rule-based risk checks
-- ML-powered risk classification
-- async model inference
-- explainable fraud decisions
-- model lifecycle management
-- observability
-- production-ready FastAPI architecture
-
-It is also designed to support preparation for AWS Machine Learning Engineer concepts such as:
-
-- data ingestion
-- feature engineering
-- model training
-- model deployment
-- inference endpoints
-- monitoring
-- model evaluation
-- drift detection
-
----
-
-## Core Capabilities
-
-### Transaction risk scoring
-
-The service accepts transaction data and returns a fraud risk score.
-
-Example output:
-
-```json
-{
-  "transactionId": "txn_123",
-  "riskScore": 0.87,
-  "riskLevel": "High",
-  "decision": "Review",
-  "reasons": [
-    "Transaction amount is unusually high",
-    "Customer has multiple failed attempts",
-    "Provider failure pattern detected"
-  ]
-}
-```
-
-### Rule-based fraud checks
-
-The system supports deterministic fraud rules such as:
-
-- high transaction amount
-- repeated failed transactions
-- unusual transaction frequency
-- unsupported country/currency combinations
-- blacklisted customer or device
-- suspicious provider failure patterns
-
-### ML-based prediction
-
-The service will support ML models that classify transactions as:
-
-- low risk
-- medium risk
-- high risk
-- suspicious
-- fraudulent
-
-### Feature engineering
-
-The service extracts and stores useful fraud features such as:
-
-- transaction amount
-- customer transaction count
-- failed attempt count
-- provider failure rate
-- transaction velocity
-- average customer amount
-- time since last transaction
-- currency risk profile
-- historical chargeback indicator
-
-### Async processing
-
-Fraud scoring can be performed:
-
-- synchronously for real-time API calls
-- asynchronously through a background worker
-
-This supports both:
-
-- real-time checkout decisions
-- batch fraud analysis
-
-### Model versioning
-
-Predictions should include the model version used:
-
-```json
-{
-  "modelVersion": "fraud-model-v1.0.0"
-}
-```
-
-This allows traceability when model behavior changes.
-
-### Explainability
-
-The service should not only return a score. It should explain why a transaction was considered risky.
-
-Example:
-
-```json
-{
-  "riskScore": 0.76,
-  "decision": "Review",
-  "reasons": [
-    "Amount is above customer's historical average",
-    "Transaction velocity exceeded threshold"
-  ]
-}
-```
-
----
+It is intentionally scoped for a portfolio project: practical, readable, and ML-ready without adding cloud deployment, authentication, Kubernetes, or heavyweight ML infrastructure too early.
 
 ## Architecture
 
-The project follows a modular backend architecture.
-
 ```text
-Client / Payment System
-        ↓
-FastAPI API Layer
-        ↓
-Application Services
-        ↓
-Fraud Rules + ML Inference
-        ↓
-PostgreSQL / Redis / Model Store
-        ↓
-Background Workers
+Client
+  -> FastAPI Route
+  -> Feature Engineering Service
+  -> Rules Engine
+  -> Optional ML Inference Service
+  -> Fraud Scoring Service
+  -> PostgreSQL
 ```
 
----
+The code keeps the important boundaries clear:
 
-## High-Level Components
+- Routes handle HTTP concerns and dependency injection.
+- Services handle business workflows such as feature extraction and scoring.
+- Repositories handle database access.
+- SQLAlchemy models live separately from Pydantic schemas.
+- `app/db/base.py` only defines `Base`.
+- `app/db/models.py` imports SQLAlchemy models for Alembic discovery.
 
-### API Layer
+## Current Features
 
-Responsible for:
+- Health endpoint.
+- Real-time transaction scoring.
+- Rule-based fraud checks with explainable reasons.
+- Optional baseline ML inference if a model artifact exists.
+- Hybrid scoring formula: `final_score = min((0.6 * rule_score) + (0.4 * model_score), 1.0)`.
+- PostgreSQL persistence for fraud scores.
+- Separate persistence for transaction feature snapshots.
+- Retrieval by fraud score ID.
+- Retrieval of latest fraud score by transaction ID.
+- Retrieval of saved features for a fraud score.
+- Alembic migrations.
+- Demo data seed script.
+- Baseline scikit-learn training script.
+- Tests for rules, feature engineering, scoring, routes, retrieval, and fallback behavior.
 
-- HTTP endpoints
-- request validation
-- response formatting
-- authentication later
-- rate limiting later
-- OpenAPI documentation
+## Tech Stack
 
-### Application Layer
-
-Responsible for:
-
-- fraud scoring workflows
-- feature extraction coordination
-- rule evaluation
-- ML inference orchestration
-- decision generation
-
-### Domain Layer
-
-Responsible for:
-
-- fraud decision models
-- risk levels
-- scoring rules
-- transaction feature objects
-- business rules
-
-### Infrastructure Layer
-
-Responsible for:
-
-- PostgreSQL database access
-- Redis caching
-- ML model loading
-- message queue integration
-- external service communication
-- logging and tracing
-
-### Worker Layer
-
-Responsible for:
-
-- async scoring
-- batch processing
-- feature refresh jobs
-- model evaluation jobs
-- scheduled monitoring tasks
-
----
-
-## Planned Tech Stack
-
-- Python
+- Python 3.12+
 - FastAPI
-- Pydantic
-- SQLAlchemy
-- Alembic
+- Pydantic v2
+- SQLAlchemy 2.0 async
+- asyncpg
 - PostgreSQL
-- Redis
-- Celery
-- RabbitMQ or Redis broker
+- Alembic
+- Redis via Docker Compose for later async workflows
 - scikit-learn
 - pandas
-- NumPy
-- MLflow or simple model registry
-- Docker / Docker Compose
-- Pytest
+- joblib
+- pytest
 - Ruff
-- mypy
-- OpenTelemetry
-- Prometheus/Grafana later
 
----
-
-## Solution Structure
+## Project Structure
 
 ```text
-ai-fraud-detection-service/
-├── app/
-│   ├── api/
-│   │   └── v1/
-│   │       ├── routes/
-│   │       └── dependencies.py
-│   ├── core/
-│   │   ├── config.py
-│   │   ├── logging.py
-│   │   └── security.py
-│   ├── db/
-│   │   ├── session.py
-│   │   └── base.py
-│   ├── domain/
-│   │   ├── entities/
-│   │   ├── enums/
-│   │   └── rules/
-│   ├── models/
-│   │   └── database/
-│   ├── schemas/
-│   ├── services/
-│   │   ├── fraud_scoring/
-│   │   ├── feature_engineering/
-│   │   ├── model_inference/
-│   │   └── rules_engine/
-│   ├── infrastructure/
-│   │   ├── repositories/
-│   │   ├── cache/
-│   │   ├── messaging/
-│   │   └── ml/
-│   ├── workers/
-│   └── main.py
-├── alembic/
-├── tests/
-│   ├── unit/
-│   ├── integration/
-│   └── e2e/
-├── models/
-│   └── fraud_model_v1.pkl
-├── notebooks/
-├── scripts/
-├── docker-compose.yml
-├── Dockerfile
-├── pyproject.toml
-├── README.md
-└── .env.example
+app/
+  api/v1/routes/                 FastAPI route handlers
+  api/v1/dependencies.py         Dependency wiring
+  core/config.py                 Pydantic settings
+  db/base.py                     SQLAlchemy Base
+  db/models.py                   Alembic model discovery imports
+  db/session.py                  Async engine and session factory
+  infrastructure/repositories/   Database repositories
+  models/database/               SQLAlchemy database models
+  schemas/                       Pydantic request/response schemas
+  services/feature_engineering/  Feature extraction
+  services/fraud_scoring/        Rule and hybrid scoring orchestration
+  services/model_inference/      Optional model artifact inference
+  services/rules_engine/         Deterministic fraud rules
+alembic/                         Database migrations
+models/                          Local trained model artifacts, gitignored
+scripts/                         Seed and training scripts
+tests/                           Unit and route tests
 ```
 
----
-
-## Core Domain Concepts
-
-### Entities
-
-- `Transaction`
-- `FraudScore`
-- `FraudDecision`
-- `FraudRule`
-- `TransactionFeature`
-- `ModelPrediction`
-- `CustomerRiskProfile`
-
-### Important enums
-
-- `RiskLevel`
-- `FraudDecisionType`
-- `FraudRuleType`
-- `ModelStatus`
-- `TransactionChannel`
-
-### Risk levels
-
-- Low
-- Medium
-- High
-- Critical
-
-### Decisions
-
-- Approve
-- Review
-- Block
-
----
-
-## API Scope
-
-### Fraud scoring
-
-| Method | Endpoint | Description |
-|---|---|---|
-| `POST` | `/api/v1/fraud/score` | Score a transaction in real time |
-| `GET` | `/api/v1/fraud/scores/{score_id}` | Get fraud score details |
-| `GET` | `/api/v1/fraud/transactions/{transaction_id}` | Get fraud analysis for a transaction |
-
-### Rules
-
-| Method | Endpoint | Description |
-|---|---|---|
-| `GET` | `/api/v1/rules` | List fraud rules |
-| `POST` | `/api/v1/rules` | Create fraud rule |
-| `PUT` | `/api/v1/rules/{rule_id}` | Update fraud rule |
-| `POST` | `/api/v1/rules/{rule_id}/disable` | Disable fraud rule |
-
-### Features
-
-| Method | Endpoint | Description |
-|---|---|---|
-| `POST` | `/api/v1/features/extract` | Extract features from transaction data |
-| `GET` | `/api/v1/features/transactions/{transaction_id}` | Get extracted transaction features |
-
-### Models
-
-| Method | Endpoint | Description |
-|---|---|---|
-| `GET` | `/api/v1/models` | List registered fraud models |
-| `GET` | `/api/v1/models/{model_id}` | Get model metadata |
-| `POST` | `/api/v1/models/{model_id}/activate` | Activate model version |
-
-### Operations
+## API Endpoints
 
 | Method | Endpoint | Description |
 |---|---|---|
 | `GET` | `/health` | Health check |
-| `GET` | `/metrics` | Metrics endpoint later |
-
----
+| `POST` | `/api/v1/fraud/score` | Score and persist a transaction |
+| `GET` | `/api/v1/fraud/scores/{score_id}` | Get a fraud score by ID |
+| `GET` | `/api/v1/fraud/transactions/{transaction_id}` | Get latest score for a transaction |
+| `GET` | `/api/v1/fraud/scores/{score_id}/features` | Get saved features for a score |
 
 ## Example Request
 
 ```json
 {
-  "transactionId": "txn_1001",
-  "customerId": "cust_001",
-  "amountMinor": 250000,
+  "transaction_id": "txn-1001",
+  "customer_id": "cust-001",
+  "amount_minor": 1500000,
   "currency": "NGN",
-  "paymentProvider": "Paystack",
+  "payment_provider": "Paystack",
   "channel": "Card",
-  "customerEmail": "customer@example.com",
-  "ipAddress": "102.88.10.22",
-  "deviceId": "device_abc123",
-  "createdAtUtc": "2026-04-29T10:30:00Z"
+  "customer_email": null,
+  "ip_address": null,
+  "device_id": null,
+  "created_at_utc": "2026-05-22T10:00:00Z"
 }
 ```
-
----
 
 ## Example Response
 
 ```json
 {
-  "transactionId": "txn_1001",
-  "riskScore": 0.82,
-  "riskLevel": "High",
+  "score_id": "11111111-1111-1111-1111-111111111111",
+  "transaction_id": "txn-1001",
+  "risk_score": 0.6,
+  "risk_level": "Medium",
   "decision": "Review",
-  "modelVersion": "fraud-model-v1.0.0",
-  "rulesTriggered": [
+  "model_version": "fraud-model-v1.0.0",
+  "rules_triggered": [
     "HighAmountRule",
-    "VelocityRule"
+    "MissingDeviceRule",
+    "MissingIpAddressRule"
   ],
   "reasons": [
-    "Transaction amount is above normal customer behavior",
-    "Customer has made multiple transactions within a short time window"
+    "Transaction amount is unusually high.",
+    "Device identifier is missing.",
+    "IP address is missing."
   ],
-  "scoredAtUtc": "2026-04-29T10:30:05Z"
+  "scored_at_utc": "2026-05-22T10:00:01Z"
 }
 ```
 
----
+## Feature Engineering
 
-## ML Workflow
+The service stores an ML-ready feature snapshot for each scored transaction. Current features include:
 
-The ML workflow is expected to evolve through these stages:
+- Amount in minor and major units.
+- Currency, provider, and channel.
+- Presence of customer email, IP address, and device ID.
+- High amount indicator.
+- Customer transaction count over 24 hours.
+- Customer amount sum over 24 hours.
+- Customer average amount over 30 days.
+- Customer high-risk count over 30 days.
+- Device transaction count over 24 hours.
+- IP transaction count over 24 hours.
+- Amount-to-customer-average ratio.
+- Feature set version.
 
-```text
-Raw transaction data
-        ↓
-Data cleaning
-        ↓
-Feature engineering
-        ↓
-Model training
-        ↓
-Model evaluation
-        ↓
-Model registration
-        ↓
-Model deployment
-        ↓
-Real-time inference
-        ↓
-Monitoring
+Storing these features separately makes future model training and prediction debugging much easier.
+
+## Rule-Based Scoring
+
+The rules engine currently checks:
+
+- High transaction amount.
+- Unsupported currency.
+- Missing device ID.
+- Missing IP address.
+
+Each triggered rule contributes to the score and adds a human-readable reason. This keeps decisions explainable even before ML is introduced.
+
+## Baseline ML Pipeline
+
+The training script loads saved `transaction_features` from PostgreSQL, creates temporary weak labels from risk signals, trains a simple `RandomForestClassifier`, and saves:
+
+- `models/fraud_model_v1.pkl`
+- `models/fraud_model_v1_metadata.json`
+
+The model artifact is intentionally local and gitignored. If the model is missing, the API continues to use rule-based scoring only.
+
+## Local Setup
+
+Create and activate a virtual environment, then install the project:
+
+```powershell
+pip install -e ".[dev]"
 ```
 
----
+Create your local environment file:
 
-## AWS ML Mapping
-
-This project is intentionally designed to map to AWS Machine Learning Engineer skills.
-
-| Project Component | AWS Equivalent |
-|---|---|
-| Raw transaction storage | Amazon S3 |
-| Feature engineering | AWS Glue / SageMaker Processing |
-| Model training | Amazon SageMaker Training Jobs |
-| Model registry | SageMaker Model Registry |
-| Real-time inference | SageMaker Endpoint / Lambda |
-| Async inference | SQS / Lambda / SageMaker Async Inference |
-| Monitoring | CloudWatch / SageMaker Model Monitor |
-| API exposure | API Gateway / ECS |
-| Database | RDS PostgreSQL |
-| Cache | ElastiCache Redis |
-
----
-
-## Development Principles
-
-- Keep APIs clean and well-documented
-- Separate rule-based scoring from ML-based scoring
-- Make fraud decisions explainable
-- Do not hide risk logic inside controllers
-- Keep model inference behind a clear interface
-- Store model version with every prediction
-- Make features reusable for training and inference
-- Prioritize observability and reproducibility
-- Build for extension, not premature complexity
-
----
-
-## Local Development
-
-### Prerequisites
-
-- Python 3.12+
-- Docker
-- Docker Compose
-- PostgreSQL
-- Redis
-
-### Environment setup
-
-Create a `.env` file from `.env.example`.
-
-```bash
-cp .env.example .env
+```powershell
+Copy-Item .env.example .env
 ```
 
-Example `.env.example`:
+Start local dependencies:
 
-```env
-APP_NAME=ai-fraud-detection-service
-ENVIRONMENT=development
-
-DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/fraud_detection
-REDIS_URL=redis://localhost:6379/0
-
-MODEL_PATH=models/fraud_model_v1.pkl
-ACTIVE_MODEL_VERSION=fraud-model-v1.0.0
+```powershell
+docker compose up -d
 ```
 
-### Run locally
+Apply migrations:
 
-```bash
+```powershell
+alembic upgrade head
+```
+
+Seed demo data:
+
+```powershell
+python scripts/seed_demo_data.py
+```
+
+Train the baseline model:
+
+```powershell
+python scripts/train_model.py
+```
+
+Run the API:
+
+```powershell
 uvicorn app.main:app --reload
 ```
 
-### Run with Docker
-
-```bash
-docker compose up --build
-```
-
-### API docs
-
-```text
-http://localhost:8000/docs
-```
-
----
-
-## Testing
-
 Run tests:
 
-```bash
+```powershell
 pytest
 ```
 
-Run with coverage:
+API docs are available at:
 
-```bash
-pytest --cov=app
+```text
+http://127.0.0.1:8000/docs
 ```
 
----
+## Docker Compose
 
-## Roadmap
+`docker-compose.yml` starts:
 
-### Phase 1: Project foundation
+- PostgreSQL on `localhost:5433`
+- Redis on `localhost:6379`
 
-- FastAPI project setup
-- PostgreSQL setup
-- SQLAlchemy models
-- Alembic migrations
-- basic fraud scoring endpoint
-- rule-based scoring engine
+The default local database URL is:
 
-### Phase 2: Feature engineering
+```env
+DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5433/fraud_detection
+```
 
-- transaction feature extraction
-- customer risk profiles
-- transaction velocity checks
-- provider failure pattern features
-- Redis caching for recent transaction history
+## What I Learned
 
-### Phase 3: ML inference
+This project demonstrates:
 
-- train initial fraud model
-- save model artifact
-- load model in inference service
-- return risk score and model version
-- combine rule score and ML score
+- How to structure a FastAPI backend with clean service and repository boundaries.
+- How to keep API responses explainable for risk decisions.
+- How to persist feature snapshots for future ML training and inference traceability.
+- How to add ML inference as an optional capability without breaking rule-based scoring.
+- How Alembic, async SQLAlchemy, and PostgreSQL fit into an ML-ready backend.
 
-### Phase 4: Async processing
+## Future Improvements
 
-- Celery worker setup
-- async fraud scoring jobs
-- queue-based batch scoring
-- retry and dead-letter handling
+- Add real fraud labels and train on a real dataset.
+- Add model evaluation reports and threshold tuning.
+- Store separate rule score, model score, and final score columns.
+- Add structured logging and request IDs.
+- Add CI checks for tests and linting.
+- Add Celery jobs for batch scoring and scheduled monitoring.
+- Add authentication and deployment only after the local service is fully stable.
 
-### Phase 5: Observability and production readiness
+## Portfolio Summary
 
-- structured logging
-- OpenTelemetry tracing
-- health checks
-- Docker Compose environment
-- integration tests
-- CI pipeline
-
-### Phase 6: AWS ML alignment
-
-- S3-style data layout
-- SageMaker-style training pipeline
-- model registry simulation
-- monitoring and drift detection
-- deployment notes for AWS
-
----
-
-## Future Enhancements
-
-- real fraud dataset training
-- anomaly detection model
-- graph-based fraud detection
-- device fingerprinting
-- geolocation risk scoring
-- customer behavior profiling
-- model drift monitoring
-- human review workflow
-- fraud case management
-- integration with `payment-routing-engine`
-
----
-
-## Status
-
-This project is currently in active design and implementation.
-
-The first milestone is to build a clean FastAPI foundation with a rule-based fraud scoring engine before adding ML inference.
-
----
-
-## Author
-
-Built as part of a world-class backend and AI engineering portfolio focused on:
-
-- fraud detection
-- payment intelligence
-- machine learning systems
-- backend architecture
-- AWS ML Engineer preparation
+`ai-fraud-detection-service` is a compact but realistic fraud scoring backend. It shows API design, async database persistence, explainable decisions, feature engineering, baseline ML training, optional model inference, and tests in one coherent project.

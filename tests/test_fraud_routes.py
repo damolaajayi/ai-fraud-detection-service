@@ -64,7 +64,11 @@ class FakeFeatureEngineeringService:
 
 
 class FakeFraudScoringService:
-    def score(self, request: FraudScoreRequest) -> FraudScoreResponse:
+    def score(
+        self,
+        request: FraudScoreRequest,
+        features: TransactionFeatures | None = None,
+    ) -> FraudScoreResponse:
         return FraudScoreResponse(
             transaction_id=request.transaction_id,
             risk_score=0.35,

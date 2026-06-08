@@ -6,7 +6,7 @@ services:
     environment:
       POSTGRES_DB: fraud_detection
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: D@vidbeckham123
+      POSTGRES_PASSWORD: postgres
     ports:
       - "5433:5432"
     volumes:
@@ -17,7 +17,7 @@ services:
     container_name: fraud-detection-redis
     restart: unless-stopped
     ports:
-      - "6380:6379"
+      - "6379:6379"
 
 volumes:
   fraud_postgres_data:

@@ -13,7 +13,7 @@ from app.db.session import AsyncSessionLocal
 from app.infrastructure.repositories.transaction_feature_repository import (
     TransactionFeatureRepository,
 )
-
+from app.models.database.transaction_feature import TransactionFeatureRecord
 
 MODEL_VERSION = "fraud-model-v1.0.0"
 
@@ -22,51 +22,58 @@ MODEL_DIR = BASE_DIR / "models"
 MODEL_PATH = MODEL_DIR / "fraud_model_v1.pkl"
 METADATA_PATH = MODEL_DIR / "fraud_model_v1_metadata.json"
 
-
 FEATURE_COLUMNS = [
     "amount_minor",
-    "is_missing_device_id",
-    "is_missing_ip_address",
-    "is_missing_customer_email",
+    "amount_major",
+    "has_customer_email",
+    "has_ip_address",
+    "has_device_id",
+    "is_high_amount",
     "customer_transaction_count_24h",
-    "customer_total_amount_24h",
-    "customer_average_amount_24h",
-    "amount_to_customer_average_ratio",
-    "customer_high_risk_count_24h",
+    "customer_amount_sum_24h",
+    "customer_average_amount_30d",
+    "customer_high_risk_count_30d",
     "device_transaction_count_24h",
-    "ip_transaction_count_1h",
+    "ip_transaction_count_24h",
+    "amount_to_customer_average_ratio",
 ]
 
 
-def create_label(row: pd.Series) -> int:
-    """
-    Temporary weak label.
+def create_weak_label(row: pd.Series) -> int:
+    if row["is_high_amount"]:
+        return 1
 
-    Since we do not have confirmed fraud labels yet, we create a baseline label
-    from existing rule/model-like signals.
-
-    Later, this should be replaced with real fraud labels:
-    - confirmed_fraud
-    - chargeback
-    - manual_review_result
-    - customer_dispute
-    """
-    if row["customer_high_risk_count_24h"] >= 2:
+    if row["customer_high_risk_count_30d"] >= 1:
         return 1
 
     if row["amount_to_customer_average_ratio"] >= 3:
         return 1
 
-    if row["ip_transaction_count_1h"] >= 5:
+    if row["device_transaction_count_24h"] >= 4:
         return 1
 
-    if row["device_transaction_count_24h"] >= 5:
-        return 1
-
-    if row["amount_minor"] >= 1_000_000:
+    if row["ip_transaction_count_24h"] >= 4:
         return 1
 
     return 0
+
+
+def record_to_row(record: TransactionFeatureRecord) -> dict[str, float | int]:
+    return {
+        "amount_minor": record.amount_minor,
+        "amount_major": record.amount_major,
+        "has_customer_email": int(record.has_customer_email),
+        "has_ip_address": int(record.has_ip_address),
+        "has_device_id": int(record.has_device_id),
+        "is_high_amount": int(record.is_high_amount),
+        "customer_transaction_count_24h": record.customer_transaction_count_24h,
+        "customer_amount_sum_24h": record.customer_amount_sum_24h,
+        "customer_average_amount_30d": record.customer_average_amount_30d,
+        "customer_high_risk_count_30d": record.customer_high_risk_count_30d,
+        "device_transaction_count_24h": record.device_transaction_count_24h,
+        "ip_transaction_count_24h": record.ip_transaction_count_24h,
+        "amount_to_customer_average_ratio": record.amount_to_customer_average_ratio,
+    }
 
 
 async def load_training_dataframe() -> pd.DataFrame:
@@ -74,54 +81,33 @@ async def load_training_dataframe() -> pd.DataFrame:
         repository = TransactionFeatureRepository(session)
         records = await repository.list_for_training_async()
 
-    rows = []
-
-    for record in records:
-        rows.append(
-            {
-                "amount_minor": record.amount_minor,
-                "is_missing_device_id": int(record.is_missing_device_id),
-                "is_missing_ip_address": int(record.is_missing_ip_address),
-                "is_missing_customer_email": int(record.is_missing_customer_email),
-                "customer_transaction_count_24h": record.customer_transaction_count_24h,
-                "customer_total_amount_24h": record.customer_total_amount_24h,
-                "customer_average_amount_24h": record.customer_average_amount_24h,
-                "amount_to_customer_average_ratio": record.amount_to_customer_average_ratio,
-                "customer_high_risk_count_24h": record.customer_high_risk_count_24h,
-                "device_transaction_count_24h": record.device_transaction_count_24h,
-                "ip_transaction_count_1h": record.ip_transaction_count_1h,
-            }
-        )
-
-    return pd.DataFrame(rows)
+    return pd.DataFrame([record_to_row(record) for record in records])
 
 
-async def main() -> None:
-    MODEL_DIR.mkdir(parents=True, exist_ok=True)
-
-    dataframe = await load_training_dataframe()
-
+def train_model(dataframe: pd.DataFrame) -> tuple[dict[str, object], dict[str, object]]:
     if dataframe.empty:
         raise RuntimeError(
-            "No transaction features found. Score some transactions before training the model."
+            "No transaction features found. Run `python scripts/seed_demo_data.py` "
+            "or score transactions before training."
         )
 
-    dataframe["label"] = dataframe.apply(create_label, axis=1)
+    dataframe["label"] = dataframe.apply(create_weak_label, axis=1)
 
     if dataframe["label"].nunique() < 2:
         raise RuntimeError(
-            "Training data has only one class. Add both low-risk and high-risk sample transactions."
+            "Training data has only one label class. Add both low-risk and high-risk examples."
         )
 
     x = dataframe[FEATURE_COLUMNS]
     y = dataframe["label"]
 
+    stratify = y if y.value_counts().min() >= 2 else None
     x_train, x_test, y_train, y_test = train_test_split(
         x,
         y,
-        test_size=0.25,
+        test_size=0.30,
         random_state=42,
-        stratify=y,
+        stratify=stratify,
     )
 
     model = RandomForestClassifier(
@@ -129,39 +115,41 @@ async def main() -> None:
         random_state=42,
         class_weight="balanced",
     )
-
     model.fit(x_train, y_train)
-
-    y_pred = model.predict(x_test)
 
     report = classification_report(
         y_test,
-        y_pred,
+        model.predict(x_test),
         output_dict=True,
         zero_division=0,
     )
 
-    model_package = {
+    model_package: dict[str, object] = {
         "model": model,
         "feature_columns": FEATURE_COLUMNS,
         "model_version": MODEL_VERSION,
     }
-
-    joblib.dump(model_package, MODEL_PATH)
-
-    metadata = {
+    metadata: dict[str, object] = {
         "model_version": MODEL_VERSION,
         "trained_at_utc": datetime.now(UTC).isoformat(),
         "training_records": int(len(dataframe)),
+        "positive_labels": int(dataframe["label"].sum()),
+        "negative_labels": int((dataframe["label"] == 0).sum()),
         "feature_columns": FEATURE_COLUMNS,
         "metrics": report,
-        "label_strategy": "weak_labels_from_rule_based_signals",
+        "label_strategy": "weak_labels_from_feature_and_rule_signals",
     }
 
-    METADATA_PATH.write_text(
-        json.dumps(metadata, indent=2),
-        encoding="utf-8",
-    )
+    return model_package, metadata
+
+
+async def main() -> None:
+    MODEL_DIR.mkdir(parents=True, exist_ok=True)
+    dataframe = await load_training_dataframe()
+    model_package, metadata = train_model(dataframe)
+
+    joblib.dump(model_package, MODEL_PATH)
+    METADATA_PATH.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
 
     print(f"Model saved to: {MODEL_PATH}")
     print(f"Metadata saved to: {METADATA_PATH}")

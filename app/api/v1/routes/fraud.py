@@ -43,7 +43,7 @@ async def score_transaction(
     ],
 ) -> FraudScoreResponse:
     features = await feature_engineering_service.extract(request, fraud_score_repository)
-    response = scoring_service.score(request)
+    response = scoring_service.score(request, features)
 
     fraud_score = await fraud_score_repository.add_async(request, response)
     await transaction_feature_repository.add_async(fraud_score.id, features)

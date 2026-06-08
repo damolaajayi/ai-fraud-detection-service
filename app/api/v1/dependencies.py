@@ -10,6 +10,7 @@ from app.infrastructure.repositories.transaction_feature_repository import (
 )
 from app.services.feature_engineering.feature_engineering_service import FeatureEngineeringService
 from app.services.fraud_scoring.fraud_scoring_service import FraudScoringService
+from app.services.model_inference.model_inference_service import ModelInferenceService
 from app.services.rules_engine.fraud_rules import FraudRulesEngine
 
 
@@ -29,5 +30,9 @@ def get_feature_engineering_service() -> FeatureEngineeringService:
     return FeatureEngineeringService()
 
 
+def get_model_inference_service() -> ModelInferenceService:
+    return ModelInferenceService()
+
+
 def get_fraud_scoring_service() -> FraudScoringService:
-    return FraudScoringService(FraudRulesEngine())
+    return FraudScoringService(FraudRulesEngine(), ModelInferenceService())

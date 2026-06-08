@@ -1,6 +1,8 @@
 from uuid import UUID
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.models.database.transaction_feature import TransactionFeatureRecord
 from app.schemas.features import TransactionFeatureResponse, TransactionFeatures
 
@@ -8,7 +10,6 @@ from app.schemas.features import TransactionFeatureResponse, TransactionFeatures
 class TransactionFeatureRepository:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
-
 
     async def add_async(
         self,
@@ -56,11 +57,10 @@ class TransactionFeatureRepository:
         )
 
         return result.scalar_one_or_none()
-    
+
     async def list_for_training_async(self) -> list[TransactionFeatureRecord]:
         result = await self._session.execute(
-            select(TransactionFeatureRecord)
-            .order_by(TransactionFeatureRecord.created_at_utc.asc())
+            select(TransactionFeatureRecord).order_by(TransactionFeatureRecord.created_at_utc.asc())
         )
 
         return list(result.scalars().all())
@@ -92,5 +92,3 @@ class TransactionFeatureRepository:
             transaction_created_at_utc=record.transaction_created_at_utc,
             extracted_at_utc=record.extracted_at_utc,
         )
-
-        
